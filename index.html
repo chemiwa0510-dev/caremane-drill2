@@ -49,6 +49,38 @@ h2{font-size:1.15rem}
 nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--surface);border-top:1px solid var(--line);display:flex;justify-content:center;padding:6px max(8px,env(safe-area-inset-right,0px)) calc(6px + env(safe-area-inset-bottom,0px)) max(8px,env(safe-area-inset-left,0px))}
 nav.tabs .in{display:grid;grid-template-columns:repeat(6,1fr);width:100%;max-width:640px}
 nav.tabs button{position:relative}nav.tabs .badge{position:absolute;top:0;left:calc(50% + 6px);margin:0}
+.streak{display:flex;align-items:center;gap:12px}
+.streak .fire{font-size:2.2rem;line-height:1}
+.streak .big{font-family:var(--f-head);font-size:1.6rem;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.2}
+.streak .sub{font-size:.8rem;color:var(--muted)}
+.streak .bc{margin-left:auto;text-align:center;border:1px solid var(--line);background:var(--sunk);border-radius:12px;padding:6px 10px;cursor:pointer;font:inherit;color:inherit}
+.streak .bc b{display:block;font-family:var(--f-head);font-size:1.15rem}
+.streak .bc span{font-size:.7rem;color:var(--muted);white-space:nowrap}
+.wrap1 td:first-child{white-space:normal}
+.badges{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.bdg{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:8px 4px;text-align:center;line-height:1.35}
+.bdg .e{font-size:1.9rem;display:block;line-height:1.2}
+.bdg b{display:block;font-size:.78rem}
+.bdg span{display:block;font-size:.66rem;color:var(--muted)}
+.bdg.off .e{filter:grayscale(1);opacity:.35}
+.bdg.off b{color:var(--muted)}
+.toast{position:fixed;left:50%;top:calc(14px + env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:60;background:var(--ink);color:var(--bg);border-radius:14px;padding:10px 16px;box-shadow:0 8px 24px rgba(0,0,0,.25);font-weight:700;text-align:center;max-width:92vw}
+.toast .e{font-size:1.6rem;display:block}
+.mockbar{position:sticky;top:0;z-index:5;background:var(--bg);padding:6px 0;display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:.85rem;color:var(--muted)}
+.mockbar .tm{font-family:var(--f-head);font-weight:700;font-size:1.1rem;color:var(--ink);font-variant-numeric:tabular-nums}
+.mockbar .tm.low{color:var(--ng)}
+.qgrid{display:grid;grid-template-columns:repeat(10,1fr);gap:4px}
+.qgrid button{border:1px solid var(--line);background:var(--surface);border-radius:6px;padding:4px 0;font-size:.72rem;cursor:pointer;font-variant-numeric:tabular-nums}
+.qgrid button.done{background:var(--accent-soft);border-color:var(--accent)}
+.qgrid button.cur{outline:2px solid var(--accent)}
+.qgrid button.ok{background:var(--ok-soft);border-color:var(--ok)}
+.qgrid button.ng{background:var(--ng-soft);border-color:var(--ng)}
+.pass{font-family:var(--f-head);font-size:2rem;font-weight:700;text-align:center}
+.pass.ok{color:var(--ok)}.pass.ng{color:var(--ng)}
+details.rv{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:8px 12px}
+details.rv summary{cursor:pointer;font-size:.9rem;line-height:1.5}
+details.rv[open] summary{margin-bottom:8px}
+.rk .nm small{display:block;font-size:.72rem;color:var(--muted);font-weight:400}
 .rk{display:flex;flex-direction:column;gap:6px;list-style:none;margin:0;padding:0}
 .rk li{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:8px 12px}
 .rk li.me{border:2px solid var(--accent);background:var(--accent-soft)}
@@ -193,7 +225,7 @@ const stemOf=q=>q.topic.replace(/について$/,'')+'について、<b>正しい
 const oxStem=q=>q.topic.replace(/について$/,'')+'について';
 
 /* ---------- state ---------- */
-let S={v:1,mcq:{},ox:{},days:{},imported:false};
+let S={v:1,mcq:{},ox:{},days:{},imported:false,mocks:[]};
 let OWNER=false;
 let store=null, saving=false, dirty=false;
 const LS='caremane-drill-v1';
@@ -205,7 +237,7 @@ function rkGet(k){try{return localStorage.getItem(LS+'-'+k)}catch(e){return null
 function rkSet(k,v){try{v==null?localStorage.removeItem(LS+'-'+k):localStorage.setItem(LS+'-'+k,v)}catch(e){}}
 function myId(){let id=rkGet('uid');if(!id){id='';const c='abcdefghijklmnopqrstuvwxyz0123456789';const a=new Uint32Array(24);(crypto.getRandomValues?crypto.getRandomValues(a):a.forEach((_,i)=>a[i]=Math.random()*1e9));a.forEach(n=>id+=c[n%36]);rkSet('uid',id)}return id}
 function weekKey(d){d=d?new Date(d+'T00:00:00'):new Date();const w=(d.getDay()+6)%7;d.setDate(d.getDate()-w);return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())}
-function myScore(){const t=totals();const wk=weekKey();let wn=0,wc=0;for(const k in S.days){if(weekKey(k)===wk){wn+=S.days[k].n;wc+=S.days[k].c}}return{correct:t.c,total:t.n,wk,wc,wn}}
+function myScore(){const t=totals();const wk=weekKey();let wn=0,wc=0;for(const k in S.days){if(weekKey(k)===wk){wn+=S.days[k].n;wc+=S.days[k].c}}const st=streakInfo();return{correct:t.c,total:t.n,wk,wc,wn,streak:st.cur,ld:st.today?today():dayStr(new Date(Date.now()-864e5)),bc:earnedIds().length}}
 let rkTimer=null;
 function sendScore(now){
   const nick=rkGet('nick'); if(!RANK_URL||!nick) return Promise.resolve();
@@ -213,6 +245,91 @@ function sendScore(now){
   const go=()=>fetch(RANK_URL,{method:'POST',mode:'no-cors',body:JSON.stringify(Object.assign({action:'save',id:myId(),name:nick},myScore()))}).catch(()=>{});
   if(now) return go();
   rkTimer=setTimeout(go,2500); return Promise.resolve();
+}
+
+/* ---------- 連続日数 ---------- */
+const dayStr=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+function streakInfo(){
+  const set=new Set(Object.keys(S.days).filter(k=>S.days[k].n>0));
+  const d=new Date(); const doneToday=set.has(dayStr(d)); if(!doneToday) d.setDate(d.getDate()-1);
+  let cur=0; while(set.has(dayStr(d))){cur++;d.setDate(d.getDate()-1)}
+  let best=0,run=0,prev=null;
+  [...set].sort().forEach(k=>{const t=new Date(k+'T00:00:00');run=(prev&&Math.round((t-prev)/864e5)===1)?run+1:1;if(run>best)best=run;prev=t});
+  return {cur,best:Math.max(best,cur),today:doneToday};
+}
+
+/* ---------- バッジ ---------- */
+function fieldAll(f){const qs=Q.filter(q=>q.field===f);return qs.length>0&&qs.every(q=>S.mcq[q.id]&&S.mcq[q.id].c>0)}
+const BADGES=[
+  {id:'first',e:'🌱',n:'はじめの一歩',d:'1問解く',f:x=>x.t.n>=1},
+  {id:'c50',e:'📗',n:'50問正解',d:'累計50問正解',f:x=>x.t.c>=50},
+  {id:'c100',e:'💯',n:'100問正解',d:'累計100問正解',f:x=>x.t.c>=100},
+  {id:'c300',e:'🏅',n:'300問正解',d:'累計300問正解',f:x=>x.t.c>=300},
+  {id:'c1000',e:'👑',n:'1000問正解',d:'累計1000問正解',f:x=>x.t.c>=1000},
+  {id:'s3',e:'🔥',n:'3日連続',d:'3日続けて解く',f:x=>x.best>=3},
+  {id:'s7',e:'⚡',n:'1週間連続',d:'7日続けて解く',f:x=>x.best>=7},
+  {id:'s30',e:'🌟',n:'30日連続',d:'30日続けて解く',f:x=>x.best>=30},
+  {id:'d20',e:'🎯',n:'1日20問正解',d:'1日で20問正解',f:x=>Object.values(S.days).some(d=>d.c>=20)},
+  {id:'f1',e:'🏛️',n:'制度マスター',d:'介護保険制度の選択肢方式を全問正解',f:()=>fieldAll('介護保険制度')},
+  {id:'f2',e:'🩺',n:'医療マスター',d:'保健医療の選択肢方式を全問正解',f:()=>fieldAll('保健医療')},
+  {id:'f3',e:'🤝',n:'福祉マスター',d:'福祉サービスの選択肢方式を全問正解',f:()=>fieldAll('福祉サービス')},
+  {id:'m1',e:'📝',n:'模試デビュー',d:'模試を1回受ける',f:x=>x.mocks.length>=1},
+  {id:'m2',e:'🎓',n:'模試合格',d:'模試で合格ライン突破',f:x=>x.mocks.some(m=>m.pass)},
+  {id:'m3',e:'🏆',n:'模試90%',d:'本番模試で正答率90%以上',f:x=>x.mocks.some(m=>m.kind==='full'&&(m.s1[0]+m.s2[0])>=(m.s1[1]+m.s2[1])*0.9)}
+];
+function earnedIds(){const x={t:totals(),best:streakInfo().best,mocks:S.mocks||[]};return BADGES.filter(b=>{try{return b.f(x)}catch(e){return false}}).map(b=>b.id)}
+let toastT=null;
+function toast(html){
+  let el=document.getElementById('toast'); if(!el){el=document.createElement('div');el.id='toast';el.className='toast';el.setAttribute('role','status');document.body.appendChild(el)}
+  el.innerHTML=html; el.hidden=false; clearTimeout(toastT); toastT=setTimeout(()=>{el.hidden=true},3200);
+}
+function checkBadges(){
+  const now=earnedIds(); if(!S.badges){S.badges=now;return}
+  const fresh=now.filter(id=>!S.badges.includes(id)); if(!fresh.length) return;
+  S.badges=S.badges.concat(fresh); persist();
+  const b=BADGES.find(x=>x.id===fresh[fresh.length-1]);
+  toast('<span class="e">'+b.e+'</span>バッジ獲得！「'+esc(b.n)+'」'+(fresh.length>1?'（ほか'+(fresh.length-1)+'個）':''));
+}
+function badgeGrid(){
+  const got=new Set(earnedIds());
+  return '<div class="badges">'+BADGES.map(b=>'<div class="bdg '+(got.has(b.id)?'':'off')+'"><span class="e">'+b.e+'</span><b>'+esc(b.n)+'</b><span>'+esc(b.d)+'</span></div>').join('')+'</div>';
+}
+
+/* ---------- 模試 ---------- */
+const MOCK_TYPES={
+  full:{label:'本番模試',n:[25,20,15],min:120,desc:'本番と同じ60問・120分'},
+  mini:{label:'ミニ模試',n:[8,7,5],min:40,desc:'20問・40分（すき間時間に）'}
+};
+const PASS=0.7;
+let mock=null, mockTick=null, mockQuit=false;
+try{const t=localStorage.getItem(LS+'-mock');if(t)mock=JSON.parse(t)}catch(e){}
+function saveMock(){try{mock?localStorage.setItem(LS+'-mock',JSON.stringify(mock)):localStorage.removeItem(LS+'-mock')}catch(e){}}
+function startMock(kind){
+  const T=MOCK_TYPES[kind];
+  const pick=(f,n)=>shuffle(Q.filter(q=>q.field===f)).slice(0,n).map(q=>q.id);
+  const items=pick('介護保険制度',T.n[0]).concat(pick('保健医療',T.n[1]),pick('福祉サービス',T.n[2]));
+  mock={kind,items,sel:{},pos:0,start:Date.now(),limit:T.min*60000,result:null};
+  mockQuit=false; saveMock(); go('mock');
+}
+function mockLeft(){return mock?Math.max(0,mock.start+mock.limit-Date.now()):0}
+const fmtMs=ms=>{const s=Math.ceil(ms/1000);return Math.floor(s/60)+':'+pad(s%60)};
+function gradeMock(){
+  if(!mock||mock.result) return;
+  const sec=[[0,0],[0,0]], marks=[];
+  mock.items.forEach((id,i)=>{
+    const q=QBY[id]; const you=(mock.sel[i]||[]).map(x=>x+1).sort((a,b)=>a-b);
+    const ok=you.join()===q.ans.slice().sort((a,b)=>a-b).join();
+    const k=q.field==='介護保険制度'?0:1; sec[k][1]++; if(ok) sec[k][0]++;
+    marks.push(ok?1:0);
+    if(!you.length) return;
+    const r=S.mcq[id]||{n:0,c:0}; r.n++; if(ok) r.c++; r.last=ok; r.at=today(); S.mcq[id]=r;
+    const d=S.days[today()]||{n:0,c:0}; d.n++; if(ok) d.c++; S.days[today()]=d;
+  });
+  const pass=sec[0][0]>=Math.ceil(sec[0][1]*PASS)&&sec[1][0]>=Math.ceil(sec[1][1]*PASS);
+  const mins=Math.min(Math.ceil((Date.now()-mock.start)/60000),mock.limit/60000);
+  mock.result={s1:sec[0],s2:sec[1],pass,mins,marks};
+  S.mocks=(S.mocks||[]).concat([{at:today(),kind:mock.kind,s1:sec[0],s2:sec[1],pass,mins}]);
+  saveMock(); persist(); updateBadge(); sendScore(); checkBadges();
 }
 function lsLoad(){try{const t=localStorage.getItem(LS);return t?JSON.parse(t):null}catch(e){return null}}
 function lsSave(){try{localStorage.setItem(LS,JSON.stringify(S))}catch(e){}}
@@ -240,7 +357,7 @@ function record(kind,id,ok){
   const map=kind==='mcq'?S.mcq:S.ox;
   const r=map[id]||{n:0,c:0}; r.n++; if(ok) r.c++; r.last=ok; r.at=today(); map[id]=r;
   const d=S.days[today()]||{n:0,c:0}; d.n++; if(ok) d.c++; S.days[today()]=d;
-  persist(); updateBadge(); sendScore();
+  persist(); updateBadge(); sendScore(); checkBadges();
 }
 function totals(){
   let n=0,c=0; for(const k in S.days){n+=S.days[k].n;c+=S.days[k].c} return {n,c};
@@ -286,7 +403,8 @@ function go(t){tab=t;render();window.scrollTo(0,0);if(t==='rank')loadRank()}
 document.querySelectorAll('nav.tabs button').forEach(b=>b.addEventListener('click',()=>go(b.dataset.tab)));
 function render(){
   document.querySelectorAll('nav.tabs button').forEach(b=>b.setAttribute('aria-current',b.dataset.tab===tab?'page':'false'));
-  ({home:renderHome,quiz:renderQuiz,miss:renderMiss,stats:renderStats,rank:renderRank,words:renderWords})[tab]();
+  if(tab!=='mock'&&mockTick){clearInterval(mockTick);mockTick=null}
+  ({home:renderHome,quiz:renderQuiz,miss:renderMiss,stats:renderStats,rank:renderRank,words:renderWords,mock:renderMock})[tab]();
 }
 function segBtns(key,opts){return opts.map(([v,l])=>'<button data-k="'+key+'" data-v="'+v+'" aria-pressed="'+(String(cfg[key])===String(v))+'">'+l+'</button>').join('')}
 
@@ -299,6 +417,17 @@ function renderHome(){
     <div class="stat"><div class="lab">今日の正答率</div><div class="num">${td.n?pct(td.c,td.n)+'<small>%</small>':'—'}</div><div class="note">${td.c} / ${td.n}問</div></div>
     <div class="stat"><div class="lab">間違えた問題</div><div class="num">${miss.length}<small> 問</small></div><div class="note">解き直すと消えます</div></div>
    </div>
+   ${(()=>{const st=streakInfo(),bc=earnedIds().length;return `<section class="panel streak">
+     <span class="fire" aria-hidden="true">${st.cur?'🔥':'🌱'}</span>
+     <div><div class="big">${st.cur}<small style="font-size:.9rem"> 日連続</small></div>
+     <div class="sub">${st.today?'今日も達成！ 明日も続けよう':(st.cur?'今日解くと '+(st.cur+1)+' 日連続！':'今日から連続記録をはじめよう')}　最高 ${st.best}日</div></div>
+     <button class="bc" id="toBadges"><b>🏅 ${bc}</b><span>/ ${BADGES.length} バッジ</span></button></section>`})()}
+   <section class="panel stack" style="gap:8px">
+    <h2>模試モード</h2>
+    ${mock&&!mock.result&&mockLeft()>0?`<p class="note" style="margin:0">${MOCK_TYPES[mock.kind].label}の途中です（残り ${fmtMs(mockLeft())}）</p><button class="btn" id="mockResume">模試の続きを解く</button>`:
+     `<p class="note" style="margin:0">時間を計って本番のように解き、分野ごとに合格ライン（7割）を超えたか判定します。</p>
+     <div class="row"><button class="btn ghost" data-mock="mini">ミニ模試<br><small style="font-weight:400">20問・40分</small></button><button class="btn" data-mock="full">本番模試<br><small style="font-weight:400">60問・120分</small></button></div>`}
+   </section>
    <section class="panel stack">
     <div><p class="field-label">出題方式</p>
      <div class="mode">
@@ -317,6 +446,9 @@ function renderHome(){
   view.querySelector('#go').addEventListener('click',()=>start(buildItems(false)));
   view.querySelector('#goMiss').addEventListener('click',()=>start(buildItems(true),'間違えた問題'));
   const r=view.querySelector('#resume'); if(r) r.addEventListener('click',()=>go('quiz'));
+  view.querySelector('#toBadges').addEventListener('click',()=>{go('stats');setTimeout(()=>{const b=document.getElementById('badgeSec');if(b)b.scrollIntoView()},50)});
+  view.querySelectorAll('[data-mock]').forEach(b=>b.addEventListener('click',()=>startMock(b.dataset.mock)));
+  const mr=view.querySelector('#mockResume'); if(mr) mr.addEventListener('click',()=>go('mock'));
 }
 
 function renderQuiz(){
@@ -446,6 +578,10 @@ function renderStats(){
     <div class="mini"><b>${o.c}/${o.n}</b><span>一問一答</span></div>
     <div class="mini"><b>${keys.length}</b><span>勉強した日</span></div>
    </div>
+   <section class="panel stack" style="gap:8px" id="badgeSec"><h2>バッジ（${earnedIds().length} / ${BADGES.length}）</h2>${badgeGrid()}</section>
+   ${(S.mocks||[]).length?`<section class="panel stack" style="gap:8px"><h2>模試の記録</h2><div class="tw"><table><thead><tr><th>日付</th><th>種類</th><th>介護支援</th><th>保健医療福祉</th><th>結果</th></tr></thead><tbody>
+    ${S.mocks.slice().reverse().map(m=>`<tr><td>${esc(m.at.slice(5).replace('-','/'))}</td><td>${MOCK_TYPES[m.kind]?MOCK_TYPES[m.kind].label:''}</td><td>${m.s1[0]}/${m.s1[1]}</td><td>${m.s2[0]}/${m.s2[1]}</td><td>${m.pass?'⭕ 合格':'❌'}</td></tr>`).join('')}
+    </tbody></table></div></section>`:''}
    <section class="panel stack" style="gap:8px"><h2>日ごとの正答率</h2><p class="note" style="margin:0">直近${recent.length}日分（棒の上の数字は%）</p>${recent.length?chartSvg(recent):'<div class="empty">まだ記録がありません</div>'}</section>
    <section class="panel stack" style="gap:8px"><h2>分野別</h2>
     <div class="tw"><table><thead><tr><th>分野</th><th>正解/解いた</th><th>正答率</th></tr></thead><tbody>
@@ -459,12 +595,14 @@ function renderStats(){
   </div>`;
 }
 let rkMode='all', rkData=null, rkErr=false;
+function effStreak(r){if(!r.ld||!r.streak)return 0;const y=dayStr(new Date(Date.now()-864e5));return (r.ld===today()||r.ld===y)?r.streak:0}
 function rankRows(){
   if(!rkData) return [];
   let rows=rkData.slice();
   if(rkMode==='week'){const wk=weekKey();rows=rows.filter(r=>r.wk===wk&&r.wc>0).sort((a,b)=>b.wc-a.wc||b.wn-a.wn)}
+  else if(rkMode==='streak'){rows=rows.map(r=>Object.assign({},r,{es:effStreak(r)})).filter(r=>r.es>0).sort((a,b)=>b.es-a.es||b.correct-a.correct)}
   else rows=rows.filter(r=>r.correct>0).sort((a,b)=>b.correct-a.correct||a.total-b.total);
-  let rank=0,prev=null; return rows.map((r,i)=>{const v=rkMode==='week'?r.wc:r.correct;if(v!==prev){rank=i+1;prev=v}return Object.assign({rank},r)});
+  let rank=0,prev=null; return rows.map((r,i)=>{const v=rkMode==='week'?r.wc:rkMode==='streak'?r.es:r.correct;if(v!==prev){rank=i+1;prev=v}return Object.assign({rank},r)});
 }
 async function loadRank(){
   if(!RANK_URL) return;
@@ -486,12 +624,12 @@ function renderRank(){
     <div class="row"><input class="search" id="nick" maxlength="12" placeholder="例：みかん太郎" value="${esc(nick)}" autocomplete="off"><button class="btn" id="nickSave" style="flex:none;width:auto">${nick?'変更':'参加する'}</button></div>
     <p class="note" style="margin:0">${nick?'正解するたびに自動でランキングに反映されます。':'ニックネームを決めると、正解数でみんなと競争できます。本名は入れないでね。'}</p>
    </section>
-   <div class="seg">${[['all','累計の正解数'],['week','今週の正解数']].map(([v,l])=>'<button data-rm="'+v+'" aria-pressed="'+(rkMode===v)+'">'+l+'</button>').join('')}</div>
-   ${nick?`<div class="stat main"><div class="lab">あなた（${esc(nick)}）</div><div class="num">${me?me.rank+'<small> 位　</small>':''}${rkMode==='week'?sc.wc:sc.correct}<small> 問正解</small></div></div>`:''}
+   <div class="seg">${[['all','累計正解'],['week','今週'],['streak','🔥連続日数']].map(([v,l])=>'<button data-rm="'+v+'" aria-pressed="'+(rkMode===v)+'">'+l+'</button>').join('')}</div>
+   ${nick?`<div class="stat main"><div class="lab">あなた（${esc(nick)}）</div><div class="num">${me?me.rank+'<small> 位　</small>':''}${rkMode==='week'?sc.wc:rkMode==='streak'?sc.streak:sc.correct}<small>${rkMode==='streak'?' 日連続':' 問正解'}</small></div></div>`:''}
    ${rkErr?'<div class="panel empty">ランキングを読み込めませんでした。電波のよいところで「更新」を押してください。</div>':
      !rkData?'<div class="panel empty">読み込み中…</div>':
-     list.length?'<ul class="rk">'+list.map(r=>{const v=rkMode==='week'?r.wc:r.correct,n=rkMode==='week'?r.wn:r.total;
-       return `<li class="${r.me?'me':''}"><span class="no ${r.rank<=3?'g'+r.rank:''}">${r.rank}</span><span class="nm">${esc(r.name)}${r.me?'（あなた）':''}</span><span class="sc"><b>${v}</b> 問<span>正答率 ${pct(v,n)}%</span></span></li>`}).join('')+'</ul>'
+     list.length?'<ul class="rk">'+list.map(r=>{const v=rkMode==='week'?r.wc:rkMode==='streak'?r.es:r.correct,n=rkMode==='week'?r.wn:r.total;
+       return `<li class="${r.me?'me':''}"><span class="no ${r.rank<=3?'g'+r.rank:''}">${r.rank}</span><span class="nm">${esc(r.name)}${r.me?'（あなた）':''}<small>${effStreak(r)?'🔥'+effStreak(r)+'日連続　':''}${r.bc?'🏅'+r.bc:''}</small></span><span class="sc"><b>${v}</b> ${rkMode==='streak'?'日':'問'}${rkMode==='streak'?'':'<span>正答率 '+pct(v,n)+'%</span>'}</span></li>`}).join('')+'</ul>'
      :'<div class="panel empty">まだだれもいません。一番乗りしよう！</div>'}
    <button class="btn ghost" id="rkReload">更新</button>
    ${nick?'<button class="btn ghost" id="rkLeave" style="font-size:.85rem">ランキングから外れる</button>':''}
@@ -510,6 +648,68 @@ function renderRank(){
     try{await fetch(RANK_URL,{method:'POST',mode:'no-cors',body:JSON.stringify({action:'delete',id:myId()})})}catch(e){}
     setTimeout(loadRank,800);
   });
+}
+function renderMock(){
+  if(!mock){view.innerHTML='<div class="panel empty fade">ホームの「模試モード」から始めてね。<br><br><button class="btn" id="h">ホームへ</button></div>';view.querySelector('#h').addEventListener('click',()=>go('home'));return}
+  if(!mock.result&&mockLeft()<=0){gradeMock()}
+  if(mock.result) return renderMockResult();
+  const T=MOCK_TYPES[mock.kind], N=mock.items.length, i=mock.pos, q=QBY[mock.items[i]], need=q.ans.length, sel=mock.sel[i]||[];
+  const answered=Object.keys(mock.sel).filter(k=>(mock.sel[k]||[]).length===QBY[mock.items[k]].ans.length).length;
+  view.innerHTML=`<div class="stack fade">
+   <div class="mockbar"><span>${T.label}　${i+1} / ${N}（${q.field==='介護保険制度'?'介護支援分野':'保健医療福祉サービス分野'}）</span><span>残り <span class="tm" id="tm">${fmtMs(mockLeft())}</span></span></div>
+   <div class="progress"><i style="width:${answered/N*100}%"></i></div>
+   <p class="stem">${esc(q.topic.replace(/について$/,''))}について、<b>正しいものを${need}つ</b>選べ。</p>
+   <ul class="opts">${q.opts.map((o,j)=>`<li><div class="opt" role="button" tabindex="0" data-j="${j}" aria-pressed="${sel.includes(j)}"><span class="n">${j+1}</span><span>${esc(o)}</span></div></li>`).join('')}</ul>
+   <div class="row"><button class="btn ghost" id="mPrev" ${i?'':'disabled'}>前へ</button>${i+1<N?'<button class="btn" id="mNext">次へ</button>':'<button class="btn" id="mGrade">採点する</button>'}</div>
+   <details class="rv"><summary>問題一覧（解答済み ${answered} / ${N}）</summary>
+    <div class="qgrid">${mock.items.map((id,k)=>`<button data-k="${k}" class="${(mock.sel[k]||[]).length===QBY[id].ans.length?'done':''} ${k===i?'cur':''}">${k+1}</button>`).join('')}</div>
+    <div class="row" style="margin-top:10px"><button class="btn" id="mGrade2">ここで採点する</button></div></details>
+   <button class="btn ghost" id="mQuit" style="font-size:.85rem">${mockQuit?'もう一度押すと終了（この模試は記録されません）':'模試をやめる'}</button>
+  </div>`;
+  view.querySelectorAll('.opt').forEach(b=>{
+    const tog=()=>{const j=+b.dataset.j;const a=(mock.sel[i]||[]).slice();const k=a.indexOf(j);if(k>=0)a.splice(k,1);else{if(a.length>=need)a.shift();a.push(j)}mock.sel[i]=a;saveMock();renderMock()};
+    b.addEventListener('click',tog);b.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();tog()}});
+  });
+  const mv=d=>{mock.pos=Math.max(0,Math.min(N-1,mock.pos+d));mockQuit=false;saveMock();renderMock();window.scrollTo(0,0)};
+  view.querySelector('#mPrev').addEventListener('click',()=>mv(-1));
+  const nx=view.querySelector('#mNext'); if(nx) nx.addEventListener('click',()=>mv(1));
+  view.querySelectorAll('.qgrid button').forEach(b=>b.addEventListener('click',()=>{mock.pos=+b.dataset.k;saveMock();renderMock();window.scrollTo(0,0)}));
+  const gr=()=>{gradeMock();renderMock();window.scrollTo(0,0)};
+  const g1=view.querySelector('#mGrade'); if(g1) g1.addEventListener('click',gr);
+  view.querySelector('#mGrade2').addEventListener('click',gr);
+  view.querySelector('#mQuit').addEventListener('click',()=>{if(!mockQuit){mockQuit=true;renderMock();return}mock=null;mockQuit=false;saveMock();go('home')});
+  if(!mockTick) mockTick=setInterval(()=>{
+    if(!mock||mock.result){clearInterval(mockTick);mockTick=null;return}
+    const left=mockLeft(); const el=document.getElementById('tm');
+    if(left<=0){clearInterval(mockTick);mockTick=null;gradeMock();if(tab==='mock'){renderMock();window.scrollTo(0,0)};toast('⏰ 時間になりました。採点しました');return}
+    if(el){el.textContent=fmtMs(left);el.classList.toggle('low',left<5*60000)}
+  },1000);
+}
+function renderMockResult(){
+  const r=mock.result, T=MOCK_TYPES[mock.kind];
+  const line=n=>Math.ceil(n*PASS);
+  const secRow=(lab,s)=>`<tr><td>${lab}</td><td>${s[0]} / ${s[1]}</td><td>${line(s[1])}点〜</td><td>${s[0]>=line(s[1])?'⭕':'❌'}</td></tr>`;
+  view.innerHTML=`<div class="stack fade">
+   <h2>${T.label}の結果</h2>
+   <div class="panel stack" style="gap:6px">
+    <div class="pass ${r.pass?'ok':'ng'}">${r.pass?'🎉 合格ライン突破！':'あと少し！'}</div>
+    <p class="note" style="margin:0;text-align:center">正答率 ${pct(r.s1[0]+r.s2[0],r.s1[1]+r.s2[1])}%　かかった時間 ${r.mins}分</p>
+    <div class="tw"><table class="wrap1"><thead><tr><th>分野</th><th>正解</th><th>合格</th><th></th></tr></thead><tbody>
+     ${secRow('介護支援分野',r.s1)}${secRow('保健医療福祉サービス分野',r.s2)}</tbody></table></div>
+    <p class="note" style="margin:0">合格ラインは各分野7割の目安です（本番は毎年少し変わります）。</p>
+   </div>
+   <h3 style="font-size:1rem">答え合わせ（タップで解説）</h3>
+   <div class="stack" style="gap:6px">${mock.items.map((id,k)=>{const q=QBY[id],ok=r.marks[k],you=(mock.sel[k]||[]).map(x=>x+1).sort((a,b)=>a-b);
+     return `<details class="rv"><summary>${ok?'⭕':'❌'} ${k+1}. ${esc(q.topic)}</summary>
+      <div class="stack" style="gap:6px"><p class="note" style="margin:0">あなた：${you.length?you.join('と'):'未回答'}　正解：${q.ans.join('と')}</p>
+      ${q.opts.map((o,j)=>{const right=q.ans.includes(j+1);return `<div class="res ${right?'ok':'ng'}"><div class="line"><span>${right?'🟢':'🔴'}</span><span>${j+1}. ${hl(o)}</span>${you.includes(j+1)?'<span class="you">あなたが選択</span>':''}</div><div class="fix">${right?'→ このままで正しい'+(q.exp[j]?'（'+hl(q.exp[j])+'）':''):'→ <b>'+hl(q.exp[j]||'誤り')+'</b>'}</div></div>`}).join('')}
+      ${q.point?'<div class="point"><b>覚えるポイント</b><br>'+hl(q.point)+'</div>':''}</div></details>`}).join('')}</div>
+   <p class="note" style="margin:0">間違えた問題は「間違えた」タブにも入っています。</p>
+   <div class="row"><button class="btn ghost" id="mMiss">間違えた問題へ</button><button class="btn" id="mHome">ホームへ</button></div>
+  </div>`;
+  const end=t=>{mock=null;saveMock();go(t)};
+  view.querySelector('#mMiss').addEventListener('click',()=>end('miss'));
+  view.querySelector('#mHome').addEventListener('click',()=>end('home'));
 }
 function renderWords(){
   view.innerHTML=`<div class="stack fade"><h2>用語集</h2>
@@ -534,6 +734,7 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!sheet.hidden){shee
 
 /* ---------- boot ---------- */
 const local=lsLoad(); if(local) S=Object.assign(S,local);
+if(!S.mocks) S.mocks=[]; if(!S.badges) S.badges=earnedIds();
 updateBadge(); render(); setSync('この端末に保存');
 (async()=>{
   try{
