@@ -47,7 +47,18 @@ h2{font-size:1.15rem}
 .top small{color:var(--muted);font-size:.8rem}
 .sync{font-size:.75rem;color:var(--muted)}
 nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--surface);border-top:1px solid var(--line);display:flex;justify-content:center;padding:6px max(8px,env(safe-area-inset-right,0px)) calc(6px + env(safe-area-inset-bottom,0px)) max(8px,env(safe-area-inset-left,0px))}
-nav.tabs .in{display:grid;grid-template-columns:repeat(5,1fr);width:100%;max-width:640px}
+nav.tabs .in{display:grid;grid-template-columns:repeat(6,1fr);width:100%;max-width:640px}
+nav.tabs button{position:relative}nav.tabs .badge{position:absolute;top:0;left:calc(50% + 6px);margin:0}
+.rk{display:flex;flex-direction:column;gap:6px;list-style:none;margin:0;padding:0}
+.rk li{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:8px 12px}
+.rk li.me{border:2px solid var(--accent);background:var(--accent-soft)}
+.rk .no{flex:none;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-weight:700;background:var(--sunk);font-variant-numeric:tabular-nums}
+.rk .no.g1{background:#e9c046;color:#3a2c00}.rk .no.g2{background:#c3c8cc;color:#1e2a27}.rk .no.g3{background:#d39a6a;color:#2f1a08}
+.rk .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500}
+.rk .sc{text-align:right;font-variant-numeric:tabular-nums;line-height:1.3}
+.rk .sc b{font-family:var(--f-head);font-size:1.15rem}
+.rk .sc span{display:block;font-size:.72rem;color:var(--muted)}
+
 nav.tabs button{background:none;border:0;padding:6px 2px;border-radius:10px;font-size:.72rem;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer}
 nav.tabs button svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8}
 nav.tabs button[aria-current="page"]{color:var(--accent);font-weight:700}
@@ -149,6 +160,7 @@ dl.gl dd{margin:2px 0 0;font-size:.92rem;color:var(--ink)}
   <button data-tab="quiz"><svg viewBox="0 0 24 24"><path d="M4 4h16v16H4z"/><path d="M8 9h8M8 13h8M8 17h5"/></svg>解く</button>
   <button data-tab="miss"><svg viewBox="0 0 24 24"><path d="M12 3l9 16H3z"/><path d="M12 10v4M12 17v.5"/></svg><span>間違えた<span id="missBadge"></span></span></button>
   <button data-tab="stats"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>成績</button>
+  <button data-tab="rank"><svg viewBox="0 0 24 24"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M7 6H4a3 3 0 0 0 3 4M17 6h3a3 3 0 0 1-3 4"/></svg>ランキング</button>
   <button data-tab="words"><svg viewBox="0 0 24 24"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z"/><path d="M5 17a3 3 0 0 1 3-3h11"/></svg>用語</button>
 </div></nav>
 <div id="sheet" hidden></div>
@@ -185,6 +197,23 @@ let S={v:1,mcq:{},ox:{},days:{},imported:false};
 let OWNER=false;
 let store=null, saving=false, dirty=false;
 const LS='caremane-drill-v1';
+
+/* ---------- ランキング（Googleスプレッドシートに保存） ----------
+   ↓ Apps Script を「ウェブアプリ」としてデプロイしたときのURLを '' の中に貼る */
+const RANK_URL='https://script.google.com/macros/s/AKfycbyOiDY8s2rXLenmLfPuwcHpbUg1aoaMwRSiKRr0U41k8MIxrNOJn8Op7H4r1KfxpAHZ/exec';
+function rkGet(k){try{return localStorage.getItem(LS+'-'+k)}catch(e){return null}}
+function rkSet(k,v){try{v==null?localStorage.removeItem(LS+'-'+k):localStorage.setItem(LS+'-'+k,v)}catch(e){}}
+function myId(){let id=rkGet('uid');if(!id){id='';const c='abcdefghijklmnopqrstuvwxyz0123456789';const a=new Uint32Array(24);(crypto.getRandomValues?crypto.getRandomValues(a):a.forEach((_,i)=>a[i]=Math.random()*1e9));a.forEach(n=>id+=c[n%36]);rkSet('uid',id)}return id}
+function weekKey(d){d=d?new Date(d+'T00:00:00'):new Date();const w=(d.getDay()+6)%7;d.setDate(d.getDate()-w);return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())}
+function myScore(){const t=totals();const wk=weekKey();let wn=0,wc=0;for(const k in S.days){if(weekKey(k)===wk){wn+=S.days[k].n;wc+=S.days[k].c}}return{correct:t.c,total:t.n,wk,wc,wn}}
+let rkTimer=null;
+function sendScore(now){
+  const nick=rkGet('nick'); if(!RANK_URL||!nick) return Promise.resolve();
+  clearTimeout(rkTimer);
+  const go=()=>fetch(RANK_URL,{method:'POST',mode:'no-cors',body:JSON.stringify(Object.assign({action:'save',id:myId(),name:nick},myScore()))}).catch(()=>{});
+  if(now) return go();
+  rkTimer=setTimeout(go,2500); return Promise.resolve();
+}
 function lsLoad(){try{const t=localStorage.getItem(LS);return t?JSON.parse(t):null}catch(e){return null}}
 function lsSave(){try{localStorage.setItem(LS,JSON.stringify(S))}catch(e){}}
 function importHistory(){
@@ -211,7 +240,7 @@ function record(kind,id,ok){
   const map=kind==='mcq'?S.mcq:S.ox;
   const r=map[id]||{n:0,c:0}; r.n++; if(ok) r.c++; r.last=ok; r.at=today(); map[id]=r;
   const d=S.days[today()]||{n:0,c:0}; d.n++; if(ok) d.c++; S.days[today()]=d;
-  persist(); updateBadge();
+  persist(); updateBadge(); sendScore();
 }
 function totals(){
   let n=0,c=0; for(const k in S.days){n+=S.days[k].n;c+=S.days[k].c} return {n,c};
@@ -253,11 +282,11 @@ function start(items,label){
 /* ---------- render ---------- */
 let tab='home';
 const view=document.getElementById('view');
-function go(t){tab=t;render();window.scrollTo(0,0)}
+function go(t){tab=t;render();window.scrollTo(0,0);if(t==='rank')loadRank()}
 document.querySelectorAll('nav.tabs button').forEach(b=>b.addEventListener('click',()=>go(b.dataset.tab)));
 function render(){
   document.querySelectorAll('nav.tabs button').forEach(b=>b.setAttribute('aria-current',b.dataset.tab===tab?'page':'false'));
-  ({home:renderHome,quiz:renderQuiz,miss:renderMiss,stats:renderStats,words:renderWords})[tab]();
+  ({home:renderHome,quiz:renderQuiz,miss:renderMiss,stats:renderStats,rank:renderRank,words:renderWords})[tab]();
 }
 function segBtns(key,opts){return opts.map(([v,l])=>'<button data-k="'+key+'" data-v="'+v+'" aria-pressed="'+(String(cfg[key])===String(v))+'">'+l+'</button>').join('')}
 
@@ -428,6 +457,59 @@ function renderStats(){
     </tbody></table></div>
     ${S.imported&&OWNER?'<p class="note" style="margin:0">10/15〜11/24 はチャットの一日一問の結果です。</p>':''}</section>
   </div>`;
+}
+let rkMode='all', rkData=null, rkErr=false;
+function rankRows(){
+  if(!rkData) return [];
+  let rows=rkData.slice();
+  if(rkMode==='week'){const wk=weekKey();rows=rows.filter(r=>r.wk===wk&&r.wc>0).sort((a,b)=>b.wc-a.wc||b.wn-a.wn)}
+  else rows=rows.filter(r=>r.correct>0).sort((a,b)=>b.correct-a.correct||a.total-b.total);
+  let rank=0,prev=null; return rows.map((r,i)=>{const v=rkMode==='week'?r.wc:r.correct;if(v!==prev){rank=i+1;prev=v}return Object.assign({rank},r)});
+}
+async function loadRank(){
+  if(!RANK_URL) return;
+  rkErr=false;
+  try{await sendScore(true);const res=await fetch(RANK_URL+'?me='+encodeURIComponent(myId())+'&t='+Date.now());const j=await res.json();rkData=j.rows||[]}
+  catch(e){rkErr=true}
+  if(tab==='rank') renderRank();
+}
+function renderRank(){
+  if(!RANK_URL){view.innerHTML='<div class="stack fade"><h2>ランキング</h2><div class="panel empty">ランキングは準備中です。</div></div>';return}
+  const nick=rkGet('nick')||'';
+  const rows=rankRows(); const me=rows.find(r=>r.me);
+  const list=rows.slice(0,50);
+  const sc=myScore();
+  view.innerHTML=`<div class="stack fade">
+   <h2>ランキング</h2>
+   <section class="panel stack" style="gap:8px">
+    <p class="field-label" style="margin:0">ニックネーム（ランキングに表示されます）</p>
+    <div class="row"><input class="search" id="nick" maxlength="12" placeholder="例：みかん太郎" value="${esc(nick)}" autocomplete="off"><button class="btn" id="nickSave" style="flex:none;width:auto">${nick?'変更':'参加する'}</button></div>
+    <p class="note" style="margin:0">${nick?'正解するたびに自動でランキングに反映されます。':'ニックネームを決めると、正解数でみんなと競争できます。本名は入れないでね。'}</p>
+   </section>
+   <div class="seg">${[['all','累計の正解数'],['week','今週の正解数']].map(([v,l])=>'<button data-rm="'+v+'" aria-pressed="'+(rkMode===v)+'">'+l+'</button>').join('')}</div>
+   ${nick?`<div class="stat main"><div class="lab">あなた（${esc(nick)}）</div><div class="num">${me?me.rank+'<small> 位　</small>':''}${rkMode==='week'?sc.wc:sc.correct}<small> 問正解</small></div></div>`:''}
+   ${rkErr?'<div class="panel empty">ランキングを読み込めませんでした。電波のよいところで「更新」を押してください。</div>':
+     !rkData?'<div class="panel empty">読み込み中…</div>':
+     list.length?'<ul class="rk">'+list.map(r=>{const v=rkMode==='week'?r.wc:r.correct,n=rkMode==='week'?r.wn:r.total;
+       return `<li class="${r.me?'me':''}"><span class="no ${r.rank<=3?'g'+r.rank:''}">${r.rank}</span><span class="nm">${esc(r.name)}${r.me?'（あなた）':''}</span><span class="sc"><b>${v}</b> 問<span>正答率 ${pct(v,n)}%</span></span></li>`}).join('')+'</ul>'
+     :'<div class="panel empty">まだだれもいません。一番乗りしよう！</div>'}
+   <button class="btn ghost" id="rkReload">更新</button>
+   ${nick?'<button class="btn ghost" id="rkLeave" style="font-size:.85rem">ランキングから外れる</button>':''}
+   <p class="note" style="margin:0">今週は月曜日から日曜日までの集計です。</p>
+  </div>`;
+  view.querySelectorAll('[data-rm]').forEach(b=>b.addEventListener('click',()=>{rkMode=b.dataset.rm;renderRank()}));
+  view.querySelector('#rkReload').addEventListener('click',()=>{rkData=null;renderRank();loadRank()});
+  view.querySelector('#nickSave').addEventListener('click',()=>{
+    const v=view.querySelector('#nick').value.replace(/[\u0000-\u001f<>]/g,'').trim().slice(0,12);
+    if(!v){view.querySelector('#nick').focus();return}
+    rkSet('nick',v); rkData=null; renderRank(); loadRank();
+  });
+  const lv=view.querySelector('#rkLeave');
+  if(lv) lv.addEventListener('click',async()=>{
+    rkSet('nick',null); rkData=null; renderRank();
+    try{await fetch(RANK_URL,{method:'POST',mode:'no-cors',body:JSON.stringify({action:'delete',id:myId()})})}catch(e){}
+    setTimeout(loadRank,800);
+  });
 }
 function renderWords(){
   view.innerHTML=`<div class="stack fade"><h2>用語集</h2>
